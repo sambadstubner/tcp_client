@@ -10,9 +10,20 @@
 
 
 #define NUM_SPACES_IN_REQUEST 2
+#define MESSAGE_LENGTH_SIZE 27
+#define HEADER_SIZE 32
+#define ACTION_SIZE 5
+#define MAX_MESSAGE_SIZE 2^MESSAGE_LENGTH_SIZE
+#define UPPERCASE 0x01
+#define LOWERCASE 0x02
+#define REVERSE 0x04
+#define SHUFFLE 0x08
+#define RANDOM 0x10
 
 static int get_tens_places(int input_num);
-
+static int encode_action(char *action);
+static uint32_t create_header(char* action, char* message);
+static uint32_t get_message_length(char *data);
 
 /*
 Description:
@@ -91,23 +102,20 @@ Return value:
 */
 int tcp_client_send_request(int sockfd, char *action, char *message){
     char *request;
-    int message_size_digits = get_tens_places(strlen(message));
-    int request_size = strlen(action) + strlen(message) + message_size_digits + NUM_SPACES_IN_REQUEST;
+    int message_length = strlen(message);
+    int request_size = 4 + message_length;
     request = (char *)malloc(request_size*sizeof(char));
 
-    strcpy(request, action);
-    strcat(request, " ");
-    char message_size_str[message_size_digits];
-    sprintf(message_size_str, "%lu", strlen(message));
-    strcat(request, message_size_str);
-    strcat(request, " ");
-    strcat(request, message);
-    
+    uint32_t header = create_header(action, message);
+    memcpy(request, &header, 4);
+    memcpy(request + 4, message, message_length);
 
+    log_debug("Request: %s %d %s", action, message_length, message);
+    
     unsigned long total_num_sent = 0;
-    while(total_num_sent < strlen(request)){
+    while(total_num_sent < request_size){
         log_debug("Attempting to send: %s", request);
-        int num_sent = send(sockfd, request + total_num_sent, strlen(request), 0);
+        int num_sent = send(sockfd, request + total_num_sent, request_size, 0);
 
         if(num_sent == 0){
             exit(EXIT_SUCCESS);
@@ -121,6 +129,8 @@ int tcp_client_send_request(int sockfd, char *action, char *message){
         total_num_sent += num_sent;
     }
     log_info("Sent: %s", request);
+
+    free(request);
     
     return 0;
 }
@@ -165,13 +175,10 @@ int tcp_client_receive_response(int sockfd, int (*handle_response)(char *)){
         while(1){
             log_debug("buffer: %s", buffer);
             // Find sentinal value (space)
-            char *space_location = strchr(buffer, ' ');
-            char length_str[1024];
-            strncpy(length_str, buffer, space_location-buffer);
-            length_str[space_location-buffer] = '\0';
-            log_debug("length_str: %s", length_str);
-            int response_length = atoi(length_str);
-            int total_response_length = response_length + get_tens_places(response_length) + 1;
+            // char *space_location = strchr(buffer, ' ');
+            uint32_t response_length = get_message_length(buffer);
+            log_debug("length: %d", response_length);
+            int total_response_length = response_length + 4;
             log_debug("response_length: %d", response_length);
 
             // Reallocate the buffer if necessary and read again
@@ -181,13 +188,13 @@ int tcp_client_receive_response(int sockfd, int (*handle_response)(char *)){
                 buffer = realloc(buffer, buffer_size);
                 buffer_offset = total_buffer_contents;
                 break;
-            }else if(total_response_length > strlen(buffer)){
+            }else if(total_response_length > total_buffer_contents){
                 buffer_offset = num_read - total_response_length;
                 break;
             }
             // Copy the response from buffer into the response buffer
             char *response = (char *)malloc(sizeof(char *) * response_length);
-            strncpy(response, buffer + get_tens_places(response_length) + 1, response_length);
+            strncpy(response, buffer + 4, response_length);
             response[response_length] = '\0';
             log_debug("Response: %s", response);
             handle_response(response);
@@ -271,4 +278,46 @@ int tcp_client_close_file(FILE *fd){
 
 static int get_tens_places(int input_num){
     return snprintf(NULL, 0, "%d",input_num);
+}
+
+static int encode_action(char *action){
+    if(strcmp("uppercase", action) == 0){
+        return UPPERCASE;
+    }
+    if(strcmp("lowercase", action) == 0){
+        return LOWERCASE;
+    }
+    if(strcmp("reverse", action) == 0){
+        return REVERSE;
+    }
+    if(strcmp("shuffle", action) == 0){
+        return SHUFFLE;
+    }
+    if(strcmp("random", action) == 0){
+        return RANDOM;
+    }
+}
+
+static uint32_t create_header(char* action, char* message){
+    uint32_t action_int = (encode_action(action));
+    uint32_t message_length = strlen(message);
+    if(message_length > (MAX_MESSAGE_SIZE)){
+        log_error("Message exceeds size");
+    }
+    uint32_t header_int = (action_int << 27) | message_length;
+
+    log_debug("Header before htonl: %#04x", header_int);
+
+    header_int = htonl(header_int);
+
+    log_debug("Header after htonl: %#04x", header_int);
+
+    return header_int;
+}
+
+static uint32_t get_message_length(char *data){
+    uint32_t header = *(uint32_t *)data;
+    header = ntohl(header);
+    uint32_t length = header & 0x7FFFFFFF;
+    return length;
 }

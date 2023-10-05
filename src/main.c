@@ -6,8 +6,8 @@
 #include "file_parser.h"
 #include "log.h"
 
-char host[1024];
-char port[10];
+char host[1024] = TCP_CLIENT_DEFAULT_HOST;
+char port[10] = TCP_CLIENT_DEFAULT_PORT;
 char file[1024];
 
 int line_count = 0;
