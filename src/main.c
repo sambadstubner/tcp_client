@@ -71,8 +71,14 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if(tcp_client_receive_response(socketfd, response_callback)){
-        exit(EXIT_FAILURE);
+    if (line_count > 0){
+        if(tcp_client_receive_response(socketfd, response_callback)){
+            exit(EXIT_FAILURE);
+        }
+    }else{
+        if(tcp_client_close(socketfd) < 0){
+            log_error("Failed to close socket");
+        }
     }
 }
 

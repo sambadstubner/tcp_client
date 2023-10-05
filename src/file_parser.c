@@ -89,6 +89,11 @@ bool is_valid_action(char *input_action){
 //  FIXME make sure this is a valid action
 void get_action(char *input_line, char **action){
     const char * space_index = strchr(input_line, ' ');
+    if(space_index == NULL){
+        *action = NULL;
+        log_debug("Space is null");
+        return;
+    }
     int action_size = space_index - input_line + 1;
     *action = (char*) malloc(sizeof(char *) * (action_size + 1));
     if(action == NULL){
@@ -98,16 +103,23 @@ void get_action(char *input_line, char **action){
     strncpy(*action, input_line, space_index-input_line);
     if(!is_valid_action(*action)){
         *action = NULL;
+    }else{
+        log_debug("Get action: %s", *action);
     }
-    log_debug("Get action: %s", *action);
+    
 }
 
 void get_message(char *input_line, char **message){
     const char * space_index = strchr(input_line, ' ');
+    if(space_index == NULL){
+        *message = NULL;
+        log_debug("Space is null");
+        return;
+    }
     int message_size = strlen(space_index);
     *message = (char*) malloc(sizeof(char *) * (message_size));
     if(message == NULL){
-        log_error("Action allocation failed");
+        log_error("Message allocation failed");
     }
     int message_length = strlen(space_index + 1);
     memset(*message, '\0', message_size);
