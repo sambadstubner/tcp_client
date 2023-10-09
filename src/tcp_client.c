@@ -212,6 +212,7 @@ int tcp_client_receive_response(int sockfd, int (*handle_response)(char *)){
             }
         }
     }
+    free(buffer);
     return 0;
 }
 

@@ -60,11 +60,8 @@ int main(int argc, char *argv[]) {
         }else{
             log_debug("Action is invalid or line is empty");
         }
-        if(get_line_result > 1){
-            free(action);
-            free(message);
-        }else{
-        }
+        free(action);
+        free(message);
     }
 
     if(tcp_client_close_file(file)){
