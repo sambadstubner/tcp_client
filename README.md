@@ -1,6 +1,8 @@
 # TCP Client
 
-An example of of a pipelined TCP CLI Client supporting a custom protocol
+An example of a pipelined TCP CLI Client supporting a custom protocol
+
+[See the it's associated server](https://github.com/sambadstubner/tcp_server)
 
 ## Usage
 ```
