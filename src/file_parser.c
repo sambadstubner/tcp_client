@@ -10,7 +10,6 @@
 char *file_parser_actions[NUM_ACTIONS] = {"uppercase", "lowercase", "reverse", "shuffle", "random"};
 
 bool is_valid_action(char *input_action);
-void file_parser_get_request(char *input_line, char *request);
 void get_action(char *input_line, char **action);
 void get_message(char *input_line, char **message);
 
